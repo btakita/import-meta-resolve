@@ -13,7 +13,7 @@ export default reader
  * @param {string} jsonPath
  * @returns {{string: string}}
  */
-function read(jsonPath) {
+function read(jsonPath:string):{string:string|undefined} {
   return find(path.dirname(jsonPath))
 }
 
@@ -21,7 +21,7 @@ function read(jsonPath) {
  * @param {string} dir
  * @returns {{string: string}}
  */
-function find(dir) {
+function find(dir:string):{string:string|undefined} {
   try {
     const string = fs.readFileSync(
       path.toNamespacedPath(path.join(dir, 'package.json')),

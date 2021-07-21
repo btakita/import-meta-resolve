@@ -1,4 +1,4 @@
-import {moduleResolve, defaultResolve} from './lib/resolve.js'
+import {moduleResolve, defaultResolve} from './resolve.js'
 
 export {moduleResolve}
 
@@ -16,7 +16,7 @@ export {moduleResolve}
  *   You should pass `import.meta.url` or something else
  * @returns {Promise<string>}
  */
-export async function resolve(specifier, parent) {
+export async function resolve(specifier:string, parent:string):Promise<string> {
   if (!parent) {
     throw new Error(
       'Please pass `parent`: `import-meta-resolve` cannot ponyfill that'

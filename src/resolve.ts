@@ -17,6 +17,20 @@
  * @property {URL} resolved
  * @property {boolean} exact
  */
+export type PackageType = 'module'|'commonjs'|'none'
+export interface PackageConfig {
+  pjsonPath:string
+  exists?:boolean
+  main?:string
+  name?:string
+  type?:PackageType
+  exports?:Record<string, any>
+  imports?:Record<string, any>
+}
+export interface ResolveObject {
+  resolved:URL
+  exact:boolean
+}
 
 import {URL, fileURLToPath, pathToFileURL} from 'url'
 import {Stats, statSync, realpathSync} from 'fs'
@@ -60,7 +74,7 @@ const packageJsonCache = new Map()
  * @param {URL} base
  * @returns {void}
  */
-function emitFolderMapDeprecation(match, pjsonUrl, isExports, base) {
+function emitFolderMapDeprecation(match:string, pjsonUrl:URL, isExports:boolean, base:URL):void {
   const pjsonPath = fileURLToPath(pjsonUrl)
 
   if (emittedPackageWarnings.has(pjsonPath + '|' + match)) return
@@ -84,7 +98,7 @@ function emitFolderMapDeprecation(match, pjsonUrl, isExports, base) {
  * @param {unknown} [main]
  * @returns {void}
  */
-function emitLegacyIndexDeprecation(url, packageJsonUrl, base, main) {
+function emitLegacyIndexDeprecation(url:URL, packageJsonUrl:URL, base:URL, main:any):void {
   const {format} = defaultGetFormat(url.href)
   if (format !== 'module') return
   const path = fileURLToPath(url.href)
@@ -114,7 +128,7 @@ function emitLegacyIndexDeprecation(url, packageJsonUrl, base, main) {
  * @param {string[]} [conditions]
  * @returns {Set<string>}
  */
-function getConditionsSet(conditions) {
+function getConditionsSet(conditions:string[]):Set<string> {
   if (conditions !== undefined && conditions !== DEFAULT_CONDITIONS) {
     if (!Array.isArray(conditions)) {
       throw new ERR_INVALID_ARG_VALUE(
@@ -134,7 +148,7 @@ function getConditionsSet(conditions) {
  * @param {string} path
  * @returns {Stats}
  */
-function tryStatSync(path) {
+function tryStatSync(path:string):Stats {
   // Note: from Node 15 onwards we can use `throwIfNoEntry: false` instead.
   try {
     return statSync(path)
@@ -149,7 +163,7 @@ function tryStatSync(path) {
  * @param {URL} [base]
  * @returns {PackageConfig}
  */
-function getPackageConfig(path, specifier, base) {
+function getPackageConfig(path:string, specifier:string|URL, base?:URL):PackageConfig {
   const existing = packageJsonCache.get(path)
   if (existing !== undefined) {
     return existing
@@ -167,7 +181,7 @@ function getPackageConfig(path, specifier, base) {
       type: 'none',
       exports: undefined,
       imports: undefined
-    }
+    } as PackageConfig
     packageJsonCache.set(path, packageConfig)
     return packageConfig
   }
@@ -193,9 +207,7 @@ function getPackageConfig(path, specifier, base) {
     main: typeof main === 'string' ? main : undefined,
     name: typeof name === 'string' ? name : undefined,
     type: type === 'module' || type === 'commonjs' ? type : 'none',
-    // @ts-expect-error Assume `Object.<string, unknown>`.
     exports,
-    // @ts-expect-error Assume `Object.<string, unknown>`.
     imports: imports && typeof imports === 'object' ? imports : undefined
   }
   packageJsonCache.set(path, packageConfig)
@@ -206,7 +218,7 @@ function getPackageConfig(path, specifier, base) {
  * @param {URL|string} resolved
  * @returns {PackageConfig}
  */
-function getPackageScopeConfig(resolved) {
+function getPackageScopeConfig(resolved:URL|string):PackageConfig {
   let packageJsonUrl = new URL('./package.json', resolved)
 
   while (true) {
@@ -238,7 +250,7 @@ function getPackageScopeConfig(resolved) {
     type: 'none',
     exports: undefined,
     imports: undefined
-  }
+  } as PackageConfig
   packageJsonCache.set(packageJsonPath, packageConfig)
   return packageConfig
 }
@@ -254,7 +266,7 @@ function getPackageScopeConfig(resolved) {
  * @param {URL} url
  * @returns {boolean}
  */
-function fileExists(url) {
+function fileExists(url:URL):boolean {
   return tryStatSync(fileURLToPath(url)).isFile()
 }
 
@@ -264,7 +276,7 @@ function fileExists(url) {
  * @param {URL} base
  * @returns {URL}
  */
-function legacyMainResolve(packageJsonUrl, packageConfig, base) {
+function legacyMainResolve(packageJsonUrl:URL, packageConfig:PackageConfig, base:URL):URL {
   /** @type {URL} */
   let guess
   if (packageConfig.main !== undefined) {
@@ -326,7 +338,7 @@ function legacyMainResolve(packageJsonUrl, packageConfig, base) {
  * @param {URL} base
  * @returns {URL}
  */
-function finalizeResolution(resolved, base) {
+function finalizeResolution(resolved:URL, base:URL):URL {
   if (encodedSepRegEx.test(resolved.pathname))
     throw new ERR_INVALID_MODULE_SPECIFIER(
       resolved.pathname,
@@ -340,7 +352,6 @@ function finalizeResolution(resolved, base) {
 
   if (stats.isDirectory()) {
     const error = new ERR_UNSUPPORTED_DIR_IMPORT(path, fileURLToPath(base))
-    // @ts-expect-error Add this for `import.meta.resolve`.
     error.url = String(resolved)
     throw error
   }
@@ -362,7 +373,7 @@ function finalizeResolution(resolved, base) {
  * @param {URL} base
  * @returns {never}
  */
-function throwImportNotDefined(specifier, packageJsonUrl, base) {
+function throwImportNotDefined(specifier:string, packageJsonUrl:URL|undefined, base:URL):void {
   throw new ERR_PACKAGE_IMPORT_NOT_DEFINED(
     specifier,
     packageJsonUrl && fileURLToPath(new URL('.', packageJsonUrl)),
@@ -376,7 +387,7 @@ function throwImportNotDefined(specifier, packageJsonUrl, base) {
  * @param {URL} base
  * @returns {never}
  */
-function throwExportsNotFound(subpath, packageJsonUrl, base) {
+function throwExportsNotFound(subpath:string, packageJsonUrl:URL, base:URL):void {
   throw new ERR_PACKAGE_PATH_NOT_EXPORTED(
     fileURLToPath(new URL('.', packageJsonUrl)),
     subpath,
@@ -391,7 +402,7 @@ function throwExportsNotFound(subpath, packageJsonUrl, base) {
  * @param {URL} [base]
  * @returns {never}
  */
-function throwInvalidSubpath(subpath, packageJsonUrl, internal, base) {
+function throwInvalidSubpath(subpath:string, packageJsonUrl:URL, internal:boolean, base:URL):void {
   const reason = `request is not a valid subpath for the "${
     internal ? 'imports' : 'exports'
   }" resolution of ${fileURLToPath(packageJsonUrl)}`
@@ -412,12 +423,12 @@ function throwInvalidSubpath(subpath, packageJsonUrl, internal, base) {
  * @returns {never}
  */
 function throwInvalidPackageTarget(
-  subpath,
-  target,
-  packageJsonUrl,
-  internal,
-  base
-) {
+  subpath:string,
+  target:any,
+  packageJsonUrl:URL,
+  internal:boolean,
+  base:URL
+):void {
   target =
     typeof target === 'object' && target !== null
       ? JSON.stringify(target, null, '')
@@ -444,15 +455,15 @@ function throwInvalidPackageTarget(
  * @returns {URL}
  */
 function resolvePackageTargetString(
-  target,
-  subpath,
-  match,
-  packageJsonUrl,
-  base,
-  pattern,
-  internal,
-  conditions
-) {
+  target:string,
+  subpath:string,
+  match:string,
+  packageJsonUrl:URL,
+  base:URL,
+  pattern:boolean,
+  internal:boolean,
+  conditions:Set<string>
+):URL {
   if (subpath !== '' && !pattern && target[target.length - 1] !== '/')
     throwInvalidPackageTarget(match, target, packageJsonUrl, internal, base)
 
@@ -500,7 +511,7 @@ function resolvePackageTargetString(
  * @param {string} key
  * @returns {boolean}
  */
-function isArrayIndex(key) {
+function isArrayIndex(key:string):boolean {
   const keyNumber = Number(key)
   if (`${keyNumber}` !== key) return false
   return keyNumber >= 0 && keyNumber < 0xffff_ffff
@@ -518,15 +529,15 @@ function isArrayIndex(key) {
  * @returns {URL}
  */
 function resolvePackageTarget(
-  packageJsonUrl,
-  target,
-  subpath,
-  packageSubpath,
-  base,
-  pattern,
-  internal,
-  conditions
-) {
+  packageJsonUrl:URL,
+  target:any,
+  subpath:string,
+  packageSubpath:string,
+  base:URL,
+  pattern:boolean,
+  internal:boolean,
+  conditions:Set<string>
+):URL|null|undefined {
   if (typeof target === 'string') {
     return resolvePackageTargetString(
       target,
@@ -581,7 +592,6 @@ function resolvePackageTarget(
     }
 
     if (lastException === undefined || lastException === null) {
-      // @ts-expect-error The diff between `undefined` and `null` seems to be
       // intentional
       return lastException
     }
@@ -648,7 +658,7 @@ function resolvePackageTarget(
  * @param {URL} base
  * @returns {boolean}
  */
-function isConditionalExportsMainSugar(exports, packageJsonUrl, base) {
+function isConditionalExportsMainSugar(exports:any, packageJsonUrl:URL, base:URL):boolean {
   if (typeof exports === 'string' || Array.isArray(exports)) return true
   if (typeof exports !== 'object' || exports === null) return false
 
@@ -684,12 +694,12 @@ function isConditionalExportsMainSugar(exports, packageJsonUrl, base) {
  * @returns {ResolveObject}
  */
 function packageExportsResolve(
-  packageJsonUrl,
-  packageSubpath,
-  packageConfig,
-  base,
-  conditions
-) {
+  packageJsonUrl:URL,
+  packageSubpath:string,
+  packageConfig:Record<string, any>,
+  base:URL,
+  conditions:Set<string>
+):ResolveObject {
   let exports = packageConfig.exports
   if (isConditionalExportsMainSugar(exports, packageJsonUrl, base))
     exports = {'.': exports}
@@ -708,7 +718,7 @@ function packageExportsResolve(
     )
     if (resolved === null || resolved === undefined)
       throwExportsNotFound(packageSubpath, packageJsonUrl, base)
-    return {resolved, exact: true}
+    return {resolved:resolved as URL, exact: true}
   }
 
   let bestMatch = ''
@@ -751,10 +761,11 @@ function packageExportsResolve(
       throwExportsNotFound(packageSubpath, packageJsonUrl, base)
     if (!pattern)
       emitFolderMapDeprecation(bestMatch, packageJsonUrl, true, base)
-    return {resolved, exact: pattern}
+    return {resolved:resolved as URL, exact: pattern}
   }
 
   throwExportsNotFound(packageSubpath, packageJsonUrl, base)
+  return {resolved: {} as URL, exact: true} // satisfy ts
 }
 
 /**
@@ -763,7 +774,7 @@ function packageExportsResolve(
  * @param {Set<string>} [conditions]
  * @returns {ResolveObject}
  */
-function packageImportsResolve(name, base, conditions) {
+function packageImportsResolve(name:string, base:URL, conditions:Set<string>):ResolveObject {
   if (name === '#' || name.startsWith('#/')) {
     const reason = 'is not a valid internal imports specifier name'
     throw new ERR_INVALID_MODULE_SPECIFIER(name, reason, fileURLToPath(base))
@@ -789,7 +800,7 @@ function packageImportsResolve(name, base, conditions) {
           true,
           conditions
         )
-        if (resolved !== null) return {resolved, exact: true}
+        if (resolved !== null) return {resolved:resolved as URL, exact: true}
       } else {
         let bestMatch = ''
         const keys = Object.getOwnPropertyNames(imports)
@@ -831,7 +842,7 @@ function packageImportsResolve(name, base, conditions) {
           if (resolved !== null) {
             if (!pattern)
               emitFolderMapDeprecation(bestMatch, packageJsonUrl, false, base)
-            return {resolved, exact: pattern}
+            return {resolved:resolved as URL, exact: pattern}
           }
         }
       }
@@ -839,22 +850,23 @@ function packageImportsResolve(name, base, conditions) {
   }
 
   throwImportNotDefined(name, packageJsonUrl, base)
+  return {resolved: { } as URL, exact: false} // Satisfy ts
 }
 
 /**
  * @param {string} url
  * @returns {PackageType}
  */
-export function getPackageType(url) {
+export function getPackageType(url:string):PackageType {
   const packageConfig = getPackageScopeConfig(url)
-  return packageConfig.type
+  return packageConfig.type as PackageType
 }
 
 /**
  * @param {string} specifier
  * @param {URL} base
  */
-function parsePackageName(specifier, base) {
+function parsePackageName(specifier:string, base:URL) {
   let separatorIndex = specifier.indexOf('/')
   let validPackageName = true
   let isScoped = false
@@ -900,7 +912,7 @@ function parsePackageName(specifier, base) {
  * @param {Set<string>} conditions
  * @returns {URL}
  */
-function packageResolve(specifier, base, conditions) {
+function packageResolve(specifier:string, base:URL, conditions:Set<string>):URL {
   const {packageName, packageSubpath, isScoped} = parsePackageName(
     specifier,
     base
@@ -972,7 +984,7 @@ function packageResolve(specifier, base, conditions) {
  * @param {string} specifier
  * @returns {boolean}
  */
-function isRelativeSpecifier(specifier) {
+function isRelativeSpecifier(specifier:string):boolean {
   if (specifier[0] === '.') {
     if (specifier.length === 1 || specifier[1] === '/') return true
     if (
@@ -990,7 +1002,7 @@ function isRelativeSpecifier(specifier) {
  * @param {string} specifier
  * @returns {boolean}
  */
-function shouldBeTreatedAsRelativeOrAbsolutePath(specifier) {
+function shouldBeTreatedAsRelativeOrAbsolutePath(specifier:string):boolean {
   if (specifier === '') return false
   if (specifier[0] === '/') return true
   return isRelativeSpecifier(specifier)
@@ -1007,7 +1019,7 @@ function shouldBeTreatedAsRelativeOrAbsolutePath(specifier) {
  * @param {Set<string>} [conditions]
  * @returns {URL}
  */
-export function moduleResolve(specifier, base, conditions) {
+export function moduleResolve(specifier:string, base:URL, conditions:Set<string>):URL {
   // Order swapped from spec for minor perf gain.
   // Ok since relative URLs cannot parse as URLs.
   /** @type {URL} */
@@ -1033,7 +1045,7 @@ export function moduleResolve(specifier, base, conditions) {
  * @param {{parentURL?: string, conditions?: string[]}} context
  * @returns {{url: string}}
  */
-export function defaultResolve(specifier, context = {}) {
+export function defaultResolve(specifier:string, context:any = {}):{url:string} {
   const {parentURL} = context
   /** @type {URL} */
   let parsed

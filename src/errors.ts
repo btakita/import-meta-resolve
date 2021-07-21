@@ -3,15 +3,15 @@
 import assert from 'assert'
 // Needed for types.
 // eslint-disable-next-line no-unused-vars
-import {URL} from 'url'
 import {format, inspect} from 'util'
 
 const isWindows = process.platform === 'win32'
 
 const own = {}.hasOwnProperty
 
-export const codes = {}
+export const codes:any = {}
 
+export type MessageFunction = (...args: any[]) => string
 /**
  * @typedef {(...args: unknown[]) => string} MessageFunction
  */
@@ -20,7 +20,7 @@ export const codes = {}
 const messages = new Map()
 const nodeInternalPrefix = '__node_internal_'
 /** @type {number} */
-let userStackTraceLimit
+let userStackTraceLimit:any
 
 codes.ERR_INVALID_MODULE_SPECIFIER = createError(
   'ERR_INVALID_MODULE_SPECIFIER',
@@ -29,7 +29,7 @@ codes.ERR_INVALID_MODULE_SPECIFIER = createError(
    * @param {string} reason
    * @param {string} [base]
    */
-  (request, reason, base = undefined) => {
+  (request:string, reason:string, base:string|undefined = undefined) => {
     return `Invalid module "${request}" ${reason}${
       base ? ` imported from ${base}` : ''
     }`
@@ -44,7 +44,7 @@ codes.ERR_INVALID_PACKAGE_CONFIG = createError(
    * @param {string} [base]
    * @param {string} [message]
    */
-  (path, base, message) => {
+  (path:string, base:string, message:string) => {
     return `Invalid package config ${path}${
       base ? ` while importing ${base}` : ''
     }${message ? `. ${message}` : ''}`
@@ -61,7 +61,7 @@ codes.ERR_INVALID_PACKAGE_TARGET = createError(
    * @param {boolean} [isImport=false]
    * @param {string} [base]
    */
-  (pkgPath, key, target, isImport = false, base = undefined) => {
+  (pkgPath:string, key:string, target:unknown, isImport = false, base:string|undefined = undefined) => {
     const relError =
       typeof target === 'string' &&
       !isImport &&
@@ -95,7 +95,7 @@ codes.ERR_MODULE_NOT_FOUND = createError(
    * @param {string} base
    * @param {string} [type]
    */
-  (path, base, type = 'package') => {
+  (path:string, base:string, type = 'package') => {
     return `Cannot find ${type} '${path}' imported from ${base}`
   },
   Error
@@ -108,7 +108,7 @@ codes.ERR_PACKAGE_IMPORT_NOT_DEFINED = createError(
    * @param {string} packagePath
    * @param {string} base
    */
-  (specifier, packagePath, base) => {
+  (specifier:string, packagePath:string, base:string) => {
     return `Package import specifier "${specifier}" is not defined${
       packagePath ? ` in package ${packagePath}package.json` : ''
     } imported from ${base}`
@@ -123,7 +123,7 @@ codes.ERR_PACKAGE_PATH_NOT_EXPORTED = createError(
    * @param {string} subpath
    * @param {string} [base]
    */
-  (pkgPath, subpath, base = undefined) => {
+  (pkgPath:string, subpath:string, base = undefined) => {
     if (subpath === '.')
       return `No "exports" main defined in ${pkgPath}package.json${
         base ? ` imported from ${base}` : ''
@@ -155,7 +155,7 @@ codes.ERR_INVALID_ARG_VALUE = createError(
    * @param {unknown} value
    * @param {string} [reason='is invalid']
    */
-  (name, value, reason = 'is invalid') => {
+  (name:string, value:unknown, reason = 'is invalid') => {
     let inspected = inspect(value)
 
     if (inspected.length > 128) {
@@ -176,7 +176,7 @@ codes.ERR_UNSUPPORTED_ESM_URL_SCHEME = createError(
   /**
    * @param {URL} url
    */
-  (url) => {
+  (url:URL) => {
     let message =
       'Only file and data URLs are supported by the default ESM loader'
 
@@ -198,7 +198,7 @@ codes.ERR_UNSUPPORTED_ESM_URL_SCHEME = createError(
  * @param {ErrorConstructor} def
  * @returns {new (...args: unknown[]) => Error}
  */
-function createError(sym, value, def) {
+function createError(sym:string, value:MessageFunction|string, def:ErrorConstructor) {
   // Special case for SystemError that formats the error message differently
   // The SystemErrors only have SystemError as their base classes.
   messages.set(sym, value)
@@ -211,13 +211,12 @@ function createError(sym, value, def) {
  * @param {string} key
  * @returns {ErrorConstructor}
  */
-function makeNodeErrorWithCode(Base, key) {
-  // @ts-expect-error It’s a Node error.
+function makeNodeErrorWithCode(Base:any, key:string) {
   return NodeError
   /**
    * @param {unknown[]} args
    */
-  function NodeError(...args) {
+  function NodeError(...args:any[]) {
     const limit = Error.stackTraceLimit
     if (isErrorStackTraceLimitWritable()) Error.stackTraceLimit = 0
     const error = new Base()
@@ -240,7 +239,6 @@ function makeNodeErrorWithCode(Base, key) {
       configurable: true
     })
     addCodeToName(error, Base.name, key)
-    // @ts-expect-error It’s a Node error.
     error.code = key
     return error
   }
@@ -253,7 +251,7 @@ const addCodeToName = hideStackFrames(
    * @param {string} code
    * @returns {void}
    */
-  function (error, name, code) {
+  function (error:Error, name:string, code:string):void {
     // Set the stack
     error = captureLargerStackTrace(error)
     // Add the error code to the name to include it in the stack trace.
@@ -270,7 +268,7 @@ const addCodeToName = hideStackFrames(
         configurable: true
       })
     } else {
-      delete error.name
+      error.name = ''
     }
   }
 )
@@ -292,7 +290,7 @@ function isErrorStackTraceLimitWritable() {
  * @template {(...args: unknown[]) => unknown} T
  * @type {(fn: T) => T}
  */
-function hideStackFrames(fn) {
+function hideStackFrames(fn:(...args: any[]) => any) {
   // We rename the functions that will be hidden to cut off the stacktrace
   // at the outermost one
   const hidden = nodeInternalPrefix + fn.name
@@ -300,12 +298,12 @@ function hideStackFrames(fn) {
   return fn
 }
 
-const captureLargerStackTrace = hideStackFrames(
+const captureLargerStackTrace:(err:Error)=>Error = hideStackFrames(
   /**
    * @param {Error} error
    * @returns {Error}
    */
-  function (error) {
+  function (error:Error):Error {
     const stackTraceLimitIsWritable = isErrorStackTraceLimitWritable()
     if (stackTraceLimitIsWritable) {
       userStackTraceLimit = Error.stackTraceLimit
@@ -327,7 +325,7 @@ const captureLargerStackTrace = hideStackFrames(
  * @param {Error} self
  * @returns {string}
  */
-function getMessage(key, args, self) {
+function getMessage(key:string, args:unknown[], self:Error):string {
   const message = messages.get(key)
 
   if (typeof message === 'function') {

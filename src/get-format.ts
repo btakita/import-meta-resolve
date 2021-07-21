@@ -7,7 +7,7 @@ import {codes} from './errors.js'
 
 const {ERR_UNKNOWN_FILE_EXTENSION} = codes
 
-const extensionFormatMap = {
+const extensionFormatMap:Record<string, string|null> = {
   __proto__: null,
   '.cjs': 'commonjs',
   '.js': 'module',
@@ -18,7 +18,7 @@ const extensionFormatMap = {
  * @param {string} url
  * @returns {{format: string|null}}
  */
-export function defaultGetFormat(url) {
+export function defaultGetFormat(url:string) {
   if (url.startsWith('node:')) {
     return {format: 'builtin'}
   }
