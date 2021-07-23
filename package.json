@@ -33,7 +33,7 @@
   ],
   "dependencies": {},
   "devDependencies": {
-    "@types/node": "^16.4.0",
+    "@types/node": "^16.4.1",
     "@types/semver": "^7.3.7",
     "@types/tape": "^4.13.1",
     "builtins": "workspace:^4.0.0",
