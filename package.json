@@ -32,7 +32,7 @@
     "dist/"
   ],
   "devDependencies": {
-    "@types/node": "^16.4.7",
+    "@types/node": "^16.4.8",
     "@types/semver": "^7.3.8",
     "@types/tape": "^4.13.2",
     "builtins": "workspace:^4.0.0",
